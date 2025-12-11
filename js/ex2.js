@@ -1,216 +1,262 @@
 import * as THREE from 'three';
 import { FBXLoader } from '../js/jsm/loaders/FBXLoader.js';
 import { OrbitControls } from '../js/jsm/controls/OrbitControls.js';
-import { GUI } from '../js/jsm/libs/lil-gui.module.min.js';
 
-let camera, scene, renderer, controls, gui, minion, flash, flashLight;
-let sunMesh, sunLight, sunTarget;
+let camera, scene, renderer, controls, minion, flashModel, sunLight;
+let clock;
+let mapMeshes = [];
+let minionVelocity = new THREE.Vector3();
+let gravity = 50.0;
 let sunAngle = 0;
-let flashAnimTime = 0;
-let startX = 20, startZ = 20;
+
+let flashbangs = [];
+let nextFlashTime = 0;
 
 export function init() {
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 20, 15);
-
+    
     scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000100); 
+    scene.fog = new THREE.Fog(0x87CEEB, 200, 1000);
 
+    clock = new THREE.Clock();
+
+    
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
+    camera.position.set(0, 100, 175);
+    
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.shadowMap.autoUpdate = true;
     document.body.appendChild(renderer.domElement);
 
+    
     controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 30, 0);
+    controls.update();
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.1);
+    
+    const ambient = new THREE.AmbientLight(0xffffff, 0.3);
     scene.add(ambient);
 
-    const fill = new THREE.DirectionalLight(0xffffff, 0.4);
-    fill.position.set(5, 8, 3);
-    scene.add(fill);
-
-    const geo = new THREE.SphereGeometry(0.6, 16, 16);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-    sunMesh = new THREE.Mesh(geo, mat);
-    scene.add(sunMesh);
-
-    sunTarget = new THREE.Object3D();
-    sunTarget.position.set(0, 0, 0);
-    scene.add(sunTarget);
-
-    sunLight = new THREE.SpotLight(0xffffff, 2, 200, Math.PI * 0.22, 0.4, 1);
+    sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    sunLight.position.set(100, 200, 100);
     sunLight.castShadow = true;
-
     sunLight.shadow.mapSize.width = 4096;
     sunLight.shadow.mapSize.height = 4096;
-
-    sunLight.shadow.bias = -0.00015;
-    sunLight.shadow.normalBias = 0.4;
-
-    sunLight.target = sunTarget;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 1000;
+    sunLight.shadow.camera.left = -500;
+    sunLight.shadow.camera.right = 500;
+    sunLight.shadow.camera.top = 500;
+    sunLight.shadow.camera.bottom = -500;
     scene.add(sunLight);
 
+    
     const loader = new FBXLoader();
-    loader.setResourcePath('/assets/dust2/source/');
-    loader.load(
-        "/assets/dust2/source/Dust2.fbx",
-        (fbx) => {
-            let root = fbx.scene || fbx;
+    loader.load("/assets/dust2/source/Dust2.fbx", (fbx) => {
+        fbx.scale.setScalar(3);
+        fbx.rotation.y = -Math.PI / 2;
 
-            root.scale.setScalar(1);
-            root.rotation.y = -Math.PI / 2;
-
-            root.traverse(obj => {
-                if (obj.isMesh) {
-                    obj.castShadow = true;
-                    obj.receiveShadow = true;
-
-                    if (obj.material) {
-                        obj.material.side = THREE.DoubleSide;
-                    }
-                }
-            });
-
-            scene.add(root);
-
-            // const minLoader = new FBXLoader();
-            // minLoader.load("/assets/Minion/FBX/Minion_FBX.fbx", (mf) => {
-            //     minion = mf.scene || mf;
-            //     minion.scale.setScalar(1);
-            //     minion.position.set(0, 1, 0);
-
-            //     minion.traverse(o => {
-            //         if (o.isMesh) {
-            //             o.castShadow = true;
-            //             o.receiveShadow = true;
-            //         }
-            //     });
-
-            //     scene.add(minion);
-            // });
+        fbx.traverse(obj => {
+            if (obj.isMesh) {
+                obj.castShadow = true;
+                obj.receiveShadow = true;
+                if (obj.material) obj.material.side = THREE.DoubleSide;
+                mapMeshes.push(obj);
+            }
+        });
+        scene.add(fbx);
+    });
 
 
-            const flashbangLoader = new FBXLoader();
-            flashbangLoader.load("/assets/flashbang/flashbang_lowpoly.fbx", (flashLoader) => {
-                flash = flashLoader.scene || flashLoader;
+    const minLoader = new FBXLoader();
+    minLoader.load("/assets/Minion/FBX/Minion_FBX.fbx", (mf) => {
+        minion = mf.scene || mf;
+        minion.scale.setScalar(0.5);
 
-                const textureLoader = new THREE.TextureLoader();
-                const albedo = textureLoader.load('/assets/flashbang/textures/flashbang_albedo.png');
-                const normal = textureLoader.load('/assets/flashbang/textures/flashbang_normal.png');
-                const mixmap = textureLoader.load('/assets/flashbang/textures/flashbang_mixmap.png');
+        minion.position.set(0, 30, 0);
 
-                const roughnessTex = mixmap.clone();
-                roughnessTex.channel = 1; // green channel for roughness
-
-                const metalnessTex = mixmap.clone();
-                metalnessTex.channel = 0; // red channel for metalness
-
-                const aoTex = mixmap.clone();
-                aoTex.channel = 2; // blue channel for ao
-
-                flash.traverse(o => {
-                    if (o.isMesh) {
-                        o.castShadow = true;
-                        o.receiveShadow = true;
-                        o.material = new THREE.MeshStandardMaterial({
-                            map: albedo,
-                            normalMap: normal,
-                            roughnessMap: roughnessTex,
-                            metalnessMap: metalnessTex,
-                            aoMap: aoTex
-                        });
-                    }
-                });
-
-                scene.add(flash);
-                flash.visible = true;
-
-                flashLight = new THREE.PointLight(0xffffff, 3, 100);
-                flashLight.position.set(0, 3, 0);
-                scene.add(flashLight);
-            })
-        }
-    );
-
-    function animate() {
-        requestAnimationFrame(animate);
-        sunAngle += 0.003;
-        const r = 25;
-
-        const x = Math.cos(sunAngle) * r;
-        const z = Math.sin(sunAngle) * r;
-
-        sunMesh.position.set(x, 18, z);
-        sunLight.position.copy(sunMesh.position);
-
-        sunTarget.position.set(0, 0, 0);
-        sunLight.target.updateMatrixWorld();
-
-        // Flashbang animation
-        if (flash) {
-            flashAnimTime += 0.01;
-            const progress = flashAnimTime % 3; // loop every 3 units: 1 anim + 2 delay
-
-            if (progress < 1) {
-                // Animation phase
-                if (progress < 0.01) {
-                    // Randomize start position
-                    const angle = Math.random() * Math.PI * 2;
-                    const dist = 20 + Math.random() * 10;
-                    startX = Math.cos(angle) * dist;
-                    startZ = Math.sin(angle) * dist;
-                }
-                const animProgress = progress;
-                flash.visible = true;
-                if (animProgress < 0.8) {
-                    // Approach
-                    const approachProgress = animProgress / 0.8;
-                    flash.position.x = startX * (1 - approachProgress);
-                    flash.position.z = startZ * (1 - approachProgress);
-                    flash.position.y = 8;
-                    flash.rotation.y += 0.2;
-                    flash.rotation.x += 0.1;
-                    flash.scale.setScalar(0.2);
-                    flash.traverse(o => {
-                        if (o.isMesh && o.material) {
-                            o.material.opacity = 1;
-                            o.material.transparent = false;
+        minion.traverse(o => {
+            if (o.isMesh) {
+                o.castShadow = true;
+                o.receiveShadow = true;
+                if (o.material) {
+                    const materials = Array.isArray(o.material) ? o.material : [o.material];
+                    materials.forEach(mat => {
+                        if (mat.color) {
+                            mat.color.set(0xffffff);
+                            const name = mat.name ? mat.name.toLowerCase() : '';
+                            if (name.includes('body') || name.includes('skin')) {
+                                mat.color.set(0xFFFF00);
+                                if (mat.emissive) mat.emissive.set(0x333300);
+                            }
                         }
                     });
-                    flashLight.intensity = 0;
-                } else {
-                    // Explosion
-                    flash.position.set(0, 10, 0);
-                    const explodeProgress = (animProgress - 0.8) / 0.2;
-                    flash.scale.setScalar(0.2 + explodeProgress * 1);
-                    flash.rotation.y += 0.4;
-                    flash.rotation.x += 0.2;
-                    if (explodeProgress > 0.9) {
-                        flash.visible = false;
-                    } else {
-                        flash.traverse(o => {
-                            if (o.isMesh && o.material) {
-                                o.material.opacity = 1;
-                                o.material.transparent = false;
-                            }
-                        });
-                    }
-                    // Light burst
-                    const lightIntensity = Math.max(0, 1 - explodeProgress * 0.1) * 100;
-                    flashLight.intensity = lightIntensity;
                 }
-            } else {
-                // Delay phase
-                flash.visible = false;
-                flashLight.intensity = 0;
+            }
+        });
+        scene.add(minion);
+    });
+
+    const flashLoader = new FBXLoader();
+    flashLoader.load("/assets/flashbang/flashbang_lowpoly.fbx", (obj) => {
+        flashModel = obj;
+        flashModel.scale.setScalar(0.5);
+        flashModel.visible = false; 
+        
+        const tLoader = new THREE.TextureLoader();
+        const albedo = tLoader.load('/assets/flashbang/textures/flashbang_albedo.png');
+        const normal = tLoader.load('/assets/flashbang/textures/flashbang_normal.png');
+        
+        flashModel.traverse(m => {
+            if(m.isMesh) {
+                 m.material = new THREE.MeshStandardMaterial({
+                     map: albedo,
+                     normalMap: normal,
+                     metalness: 0.8,
+                     roughness: 0.2
+                 });
+            }
+        });
+        scene.add(flashModel);
+    });
+
+    animate();
+}
+
+function spawnFlashbang() {
+    if (!flashModel) return;
+
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 400;
+    const height = 200;
+
+    const startPos = new THREE.Vector3(
+        Math.cos(angle) * distance,
+        height,
+        Math.sin(angle) * distance
+    );
+
+    const bang = flashModel.clone();
+    bang.visible = true;
+    bang.position.copy(startPos);
+
+    const target = new THREE.Vector3(0, 10, 0);
+
+    const distH = new THREE.Vector2(target.x - startPos.x, target.z - startPos.z).length();
+    const speedH = 100;
+    const tripTime = distH / speedH;
+
+    const velX = (target.x - startPos.x) / tripTime;
+    const velZ = (target.z - startPos.z) / tripTime;
+
+    const velY = (target.y - startPos.y - 0.5 * (-gravity) * tripTime * tripTime) / tripTime;
+
+    const velocity = new THREE.Vector3(velX, velY, velZ);
+
+    const light = new THREE.PointLight(0xffffff, 0, 500);
+    light.position.set(0, 10, 0);
+    bang.add(light);
+
+    scene.add(bang);
+
+    flashbangs.push({
+        mesh: bang,
+        velocity: velocity,
+        light: light,
+        timer: tripTime,
+        exploded: false,
+        life: tripTime + 10.0
+    });
+}
+
+function updateFlashbangs(dt) {
+    for (let i = flashbangs.length - 1; i >= 0; i--) {
+        const fb = flashbangs[i];
+
+        if (!fb.exploded) {
+            fb.velocity.y -= gravity * dt;
+
+            const moveStep = fb.velocity.clone().multiplyScalar(dt);
+            fb.mesh.position.add(moveStep);
+
+            fb.mesh.rotation.x += 5 * dt;
+            fb.mesh.rotation.z += 5 * dt;
+
+            if (fb.mesh.position.y < 0) {
+                fb.mesh.position.y = 0;
+                fb.velocity.y *= -0.5;
+                fb.velocity.x *= 0.7;
+                fb.velocity.z *= 0.7;
             }
         }
 
-        controls.update();
-        renderer.render(scene, camera);
-    }
+        fb.timer -= dt;
+        fb.life -= dt;
 
-    animate();
+        if (fb.timer <= 0 && !fb.exploded) {
+            fb.exploded = true;
+            fb.light.intensity = 10000;
+        }
+
+        if (fb.exploded) {
+             fb.light.intensity = THREE.MathUtils.lerp(fb.light.intensity, 0, dt * 0.8);
+        }
+
+        if (fb.life <= 0) {
+            scene.remove(fb.mesh);
+            flashbangs.splice(i, 1);
+        }
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    const dt = clock.getDelta();
+    const now = clock.getElapsedTime();
+
+    sunAngle += 0.05 * dt;
+    const sunRadius = 400;
+    sunLight.position.x = Math.cos(sunAngle) * sunRadius;
+    sunLight.position.z = Math.sin(sunAngle) * sunRadius;
+    sunLight.lookAt(0, 0, 0);
+    
+    if (minion) {
+        minionVelocity.y -= gravity * dt;
+        
+        const potentialPos = minion.position.clone().add(minionVelocity.clone().multiplyScalar(dt));
+        
+        const rayStart = potentialPos.clone();
+        rayStart.y += 50; 
+        const raycaster = new THREE.Raycaster(rayStart, new THREE.Vector3(0, -1, 0));
+        const intersects = raycaster.intersectObjects(mapMeshes);
+        
+        if (intersects.length > 0) {
+            const hit = intersects[0];
+            if (hit.distance < 55) {
+                potentialPos.y = hit.point.y;
+                minionVelocity.y = 0;
+            }
+        }
+        
+        if (potentialPos.y < -100) {
+            potentialPos.set(0, 300, 0);
+            minionVelocity.set(0, 0, 0);
+        }
+
+        minion.position.copy(potentialPos);
+    }
+    
+    controls.update();
+    
+    if (now > nextFlashTime) {
+        spawnFlashbang();
+        nextFlashTime = now + 1.0 + Math.random() * 2; 
+    }
+    
+    updateFlashbangs(dt);
+
+    renderer.render(scene, camera);
 }
