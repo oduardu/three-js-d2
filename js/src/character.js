@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-// Importação ajustada para usar o "three/addons/" do seu importmap
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import {
     moveSpeed, rotateSpeed, wolfHeight, gravity, groundCheckDistance,
@@ -11,12 +10,6 @@ import {
 let wolf, characterMesh, mixer, walkAction;
 let enemy, enemyMixer, enemyWalkAction, enemyBiteAction;
 
-/**
- * Carrega e configura o personagem do lobo.
- * @param {THREE.Scene} scene - A cena do THREE.js.
- * @param {Array<Array<number>>} wallsData - Dados das paredes para spawn.
- * @param {THREE.Vector3} targetPosition - Posição do objetivo para evitar spawn perto.
- */
 export function loadWolf(scene, wallsData, targetPosition) {
     const loader = new FBXLoader();
     loader.load(
@@ -26,7 +19,6 @@ export function loadWolf(scene, wallsData, targetPosition) {
             characterMesh = object;
             wolf.add(characterMesh);
 
-            // Ajuste de escala e posição
             const targetHeight = 1.5;
             const box = new THREE.Box3().setFromObject(characterMesh);
             const size = box.getSize(new THREE.Vector3());
@@ -38,11 +30,6 @@ export function loadWolf(scene, wallsData, targetPosition) {
             characterMesh.position.z = -center.z * scaleFactor;
             characterMesh.position.y = -scaledBottomY;
 
-            // ROTAÇÃO AJUSTADA PARA FICAR COMO NO CÓDIGO ANTERIOR
-            // Se o modelo FBX estiver virado de lado, esta rotação de 180 graus (Math.PI)
-            // pode estar contribuindo. Para que ele comece olhando para frente (direção -Z local),
-            // você deve testar diferentes valores aqui (Math.PI, Math.PI / 2, -Math.PI / 2).
-            // Mantendo a rotação original de 180 graus (Math.PI) no characterMesh:
             characterMesh.rotation.y = Math.PI;
 
             // Carregar Textura
@@ -86,12 +73,6 @@ export function loadWolf(scene, wallsData, targetPosition) {
     );
 }
 
-/**
- * Carrega e configura o inimigo (Dinossauro).
- * @param {THREE.Scene} scene - A cena do THREE.js.
- * @param {Array<Array<number>>} wallsData - Dados das paredes para spawn.
- * @param {THREE.Vector3} targetPosition - Posição do objetivo para evitar spawn perto.
- */
 export function loadDino(scene, wallsData, targetPosition) {
     const dinoLoader = new FBXLoader();
     dinoLoader.load("assets/dino-hunter-deadly-shores-vicious/source/a_tyran_01.fbx", (dino) => {
@@ -155,12 +136,6 @@ export function loadDino(scene, wallsData, targetPosition) {
     });
 }
 
-/**
- * Verifica colisões horizontais (paredes) para o lobo.
- * @param {THREE.Vector3} movementVector - O vetor de movimento (local).
- * @param {THREE.Group} mapRoot - O grupo raiz do mapa.
- * @returns {boolean} - True se houver colisão.
- */
 function checkHorizontalCollision(movementVector, mapRoot) {
     if (!wolf || !mapRoot) return false;
 
@@ -201,11 +176,6 @@ function checkHorizontalCollision(movementVector, mapRoot) {
     return false;
 }
 
-/**
- * Verifica colisão vertical (chão) para o lobo.
- * @param {THREE.Group} mapRoot - O grupo raiz do mapa.
- * @returns {number} - O delta Y para ajustar a posição (0 se no chão).
- */
 function checkVerticalCollision(mapRoot) {
     if (!wolf || !mapRoot) return gravity;
 
@@ -255,11 +225,6 @@ function checkVerticalCollision(mapRoot) {
     return gravity;
 }
 
-/**
- * Processa a entrada do usuário e move o lobo.
- * @param {THREE.Vector3} targetPosition - Posição do objetivo.
- * @param {THREE.Group} mapRoot - O grupo raiz do mapa.
- */
 export function handleMovement(targetPosition, mapRoot) {
     if (!wolf || winConditionMet || gameOver) return;
 
@@ -311,10 +276,6 @@ export function handleMovement(targetPosition, mapRoot) {
     }
 }
 
-/**
- * Lógica de movimento e ataque do inimigo.
- * @param {THREE.Group} mapRoot - O grupo raiz do mapa.
- */
 export function handleEnemy(mapRoot) {
     if (walkMode || !enemy || !wolf || gameOver || winConditionMet) {
         return;
@@ -399,19 +360,11 @@ export function handleEnemy(mapRoot) {
     }
 }
 
-/**
- * Atualiza os mixers de animação.
- * @param {number} delta - Tempo delta.
- */
 export function updateCharacterAnimations(delta) {
     if (mixer) mixer.update(delta);
     if (enemyMixer) enemyMixer.update(delta);
 }
 
-/**
- * Obtém o objeto principal do lobo.
- * @returns {THREE.Group|null} - O objeto do lobo.
- */
 export function getWolf() {
     return wolf;
 }

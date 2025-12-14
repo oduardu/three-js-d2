@@ -50,7 +50,6 @@ export function init() {
     // Botão MODO NORMAL
     const normalButton = document.createElement('button');
     normalButton.textContent = 'MODO NORMAL';
-    // ... estilos ... (mantidos do original)
     normalButton.style.padding = '20px 40px';
     normalButton.style.fontSize = '24px';
     normalButton.style.fontWeight = 'bold';
@@ -72,7 +71,6 @@ export function init() {
     // Botão MODO WALK
     const walkButton = document.createElement('button');
     walkButton.textContent = 'MODO WALK';
-    // ... estilos ... (mantidos do original)
     walkButton.style.padding = '20px 40px';
     walkButton.style.fontSize = '24px';
     walkButton.style.fontWeight = 'bold';

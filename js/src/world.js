@@ -23,15 +23,11 @@ export const wallsData = [
     [-20, 2.5, 30, 15, 5, 1]
 ];
 
-/**
- * Configura o ambiente 3D: luzes, mapa, paredes e objetivo.
- * @param {THREE.Scene} scene - A cena do THREE.js.
- */
 export function setupWorld(scene) {
     // Posição do alvo (Frango Dourado)
     targetPosition = getValidSpawnPosition(wallsData);
 
-    // --- Luz Ambiente
+    // Luz Ambiente
     const ambient = new THREE.AmbientLight(0xffffff, 0.3);
     scene.add(ambient);
 
@@ -39,7 +35,7 @@ export function setupWorld(scene) {
     fill.position.set(5, 8, 3);
     scene.add(fill);
 
-    // --- Céu/Luzes Dinâmicas (Sol e Lua)
+    // Céu/Luzes Dinâmicas (Sol e Lua)
     const sunGeo = new THREE.SphereGeometry(0.6, 16, 16);
     const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff000 });
     sunMesh = new THREE.Mesh(sunGeo, sunMat);
@@ -79,7 +75,7 @@ export function setupWorld(scene) {
     moonLight.shadow.camera.far = 100;
     scene.add(moonLight);
 
-    // --- Map Root e Chão
+    // Map Root e Chão
     mapRoot = new THREE.Group();
     scene.add(mapRoot);
 
@@ -93,7 +89,7 @@ export function setupWorld(scene) {
     ground.receiveShadow = true;
     mapRoot.add(ground);
 
-    // --- Grama (InstancedMesh)
+    // Grama (InstancedMesh)
     const groundTexLoader = new THREE.TextureLoader();
     const grassTexture = groundTexLoader.load("/assets/yard-grass/textures/gm.png");
     grassTexture.colorSpace = THREE.SRGBColorSpace;
@@ -232,11 +228,6 @@ export function setupWorld(scene) {
     );
 }
 
-/**
- * Atualiza o ciclo dia/noite.
- * @param {THREE.Scene} scene - A cena do THREE.js.
- * @param {number} delta - Tempo delta.
- */
 export function updateDayNightCycle(scene, delta) {
     sunAngle += 0.0007;
     const r = 100;
@@ -278,20 +269,12 @@ export function updateDayNightCycle(scene, delta) {
     }
 }
 
-/**
- * Atualiza o mixer de animação do frango.
- * @param {number} delta - Tempo delta.
- */
 export function updateChickenAnimation(delta) {
     if (chickenAnimationMixer) {
         chickenAnimationMixer.update(delta);
     }
 }
 
-/**
- * Executa a animação customizada (como o balanço da grama).
- * @param {number} time - Tempo decorrido.
- */
 export function updateMapCustomAnimations(time) {
     if (mapRoot) {
         mapRoot.children.forEach(child => {
@@ -302,26 +285,14 @@ export function updateMapCustomAnimations(time) {
     }
 }
 
-/**
- * Obtém o grupo raiz do mapa.
- * @returns {THREE.Group|null} - O objeto mapRoot.
- */
 export function getMapRoot() {
     return mapRoot;
 }
 
-/**
- * Obtém a posição do alvo.
- * @returns {THREE.Vector3|null} - A posição do alvo.
- */
 export function getTargetPosition() {
     return targetPosition;
 }
 
-/**
- * Obtém os dados das paredes.
- * @returns {Array<Array<number>>} - Os dados das paredes.
- */
 export function getWallsData() {
     return wallsData;
 }

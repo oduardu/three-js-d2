@@ -1,7 +1,6 @@
 import * as THREE from 'three';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { FBXLoader } from '../jsm/loaders/FBXLoader.js';
 
-// --- Variáveis de Câmera e Movimento (mantidas aqui para fácil acesso global no módulo)
 export const thirdPersonCamera = {
     distance: 2.5,
     height: 2.0,
@@ -15,7 +14,6 @@ export const groundCheckDistance = 10;
 export const enemySpeed = 0.06;
 export const winDistance = 2;
 
-// Variáveis exportáveis para o estado do jogo
 export let winConditionMet = false;
 export let gameOver = false;
 export let gameStarted = false;
@@ -24,15 +22,6 @@ export const keys = { w: false, a: false, s: false, d: false };
 export const params = { cameraMode: 'Terceira Pessoa' };
 export const raycaster = new THREE.Raycaster();
 
-
-// --- Funções de Ajuda e Utilitárias
-
-/**
- * Define o estado do jogo como iniciado e o modo de jogo.
- * @param {boolean} isWalkMode - Se o modo Walk está ativo.
- * @param {THREE.Clock} clock - O relógio do THREE.js.
- * @param {HTMLElement} menuContainer - O elemento do menu a ser removido.
- */
 export function startGame(isWalkMode, clock, menuContainer) {
     walkMode = isWalkMode;
     gameStarted = true;
@@ -40,12 +29,6 @@ export function startGame(isWalkMode, clock, menuContainer) {
     clock.start();
 }
 
-/**
- * Lógica para verificar se uma posição está dentro de uma parede.
- * @param {THREE.Vector3} position - Posição a ser verificada.
- * @param {Array<Array<number>>} walls - Dados das paredes.
- * @returns {boolean} - True se estiver dentro de uma parede.
- */
 export function isPositionInsideWall(position, walls) {
     for (let w of walls) {
         const [x, y, z, width, height, depth] = w;
@@ -60,13 +43,6 @@ export function isPositionInsideWall(position, walls) {
     return false;
 }
 
-/**
- * Gera uma posição de spawn válida que não esteja dentro de uma parede e mantenha uma distância mínima de outra posição.
- * @param {Array<Array<number>>} walls - Dados das paredes.
- * @param {THREE.Vector3} [excludePosition=null] - Posição a ser evitada.
- * @param {number} [minDistance=10] - Distância mínima para a posição excluída.
- * @returns {THREE.Vector3} - Posição de spawn válida.
- */
 export function getValidSpawnPosition(walls, excludePosition = null, minDistance = 10) {
     const range = 40;
     let attempts = 0;
@@ -89,12 +65,8 @@ export function getValidSpawnPosition(walls, excludePosition = null, minDistance
         attempts++;
     }
 
-    // Retorna uma posição padrão se falhar após muitas tentativas
     return new THREE.Vector3(0, 0, 0);
 }
-
-
-// --- Funções de Tela (Game Over/Vitória)
 
 export function showGameOverScreen() {
     gameOver = true;
@@ -218,7 +190,7 @@ export function showVictoryScreen() {
     document.body.appendChild(overlay);
 }
 
-// --- Funções de Input
+// Inputs
 
 export function onKeyDown(event) {
     const key = event.key.toLowerCase();
@@ -234,13 +206,6 @@ export function onKeyUp(event) {
     }
 }
 
-// --- Funções de Câmera
-
-/**
- * Atualiza a posição e orientação da câmera em terceira pessoa.
- * @param {THREE.Camera} camera - A câmera do THREE.js.
- * @param {THREE.Group} wolf - O objeto do personagem principal.
- */
 export function updateThirdPersonCamera(camera, wolf) {
     if (!wolf || params.cameraMode !== 'Terceira Pessoa') return;
 
