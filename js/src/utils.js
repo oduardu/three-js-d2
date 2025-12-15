@@ -6,12 +6,12 @@ export const thirdPersonCamera = {
     height: 2.0,
     lookAtHeight: 1.0
 };
-export const moveSpeed = 0.2;
+export const moveSpeed = 0.5;
 export const rotateSpeed = 0.05;
 export const wolfHeight = 1.6;
 export const gravity = -0.15;
 export const groundCheckDistance = 10;
-export const enemySpeed = 0.06;
+export const enemySpeed = 0.499;
 export const winDistance = 2;
 
 export let winConditionMet = false;
@@ -68,7 +68,16 @@ export function getValidSpawnPosition(walls, excludePosition = null, minDistance
     return new THREE.Vector3(0, 0, 0);
 }
 
+function playMp3File(path) {
+    const audio = new Audio(path);
+    audio.play()
+        .catch(error => {
+            console.error("Playback failed:", error);
+        });
+}
+
 export function showGameOverScreen() {
+    playMp3File('../assets/audio/loser.mp3');
     gameOver = true;
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
@@ -130,6 +139,7 @@ export function showGameOverScreen() {
 }
 
 export function showVictoryScreen() {
+    playMp3File('../assets/audio/winner.mp3');
     winConditionMet = true;
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
